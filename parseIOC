@@ -1,0 +1,36 @@
+#!/bin/bash
+# 11/7/18
+# Converts PDF's to a text file then grabs all IPs, URLs, Filenames, and Hashes it sees
+
+echo "Checking for dependency poppler-utils, installing if not installed."
+sleep 1s
+rpm -qa | grep -qw poppler-utils || yum install -y poppler-utils
+echo ""
+echo -e "Enter the full path that contains the PDF files you want to parse IP/URL/Filenames/Hashes from. (you can tab-complete)"
+read -e -p "File path:" path
+echo ""
+
+for file in "$path"/*.pdf; do
+	pdftotext "$file" -raw >/dev/null 2>&1
+done
+
+if [ -f "$path"/IOCs.txt ]; then
+	rm "$path"/IOCs.txt
+fi
+
+if [ "$path" == "/root/" ]; then
+	echo "Can't use the root directory!"
+	exit 1
+fi
+echo -e "Parsing"
+sleep 1s
+strings "$path"/*.txt | egrep -io "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)" >> ioc.tmp
+strings "$path"/*.txt | egrep -io "((http|ftp|https):\/\/)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)" >> ioc.tmp
+strings "$path"/*.txt | egrep -io "[^\\]*\.(\w+)$" >> ioc.tmp
+strings "$path"/*.txt | egrep -io "^([a-f0-9]{32})$|^([a-f0-9]{40})$|^([a-f0-9]{64})$" >> ioc.tmp
+cat ioc.tmp | sort -u > "$path"/IOCs.txt
+echo -e "Done, check IOCs.txt in the path with your PDF's"
+function finish {
+	rm ioc.tmp
+}
+trap finish EXIT
