@@ -1,0 +1,8 @@
+#!/bin/bash
+#Grabs Abuse.ch SSL Blacklist and removes extra headers/footers
+# Andrew Danis
+
+#save SSL blacklist from abuse.ch
+curl -s https://sslbl.abuse.ch/blacklist/sslblacklist.csv --output sslblacklist.csv
+#grab date/time, hash, and threat source from CSV
+grep -oP '(\d{4}-\d{2}-\d{2})(\040)(\d{2}:\d{2}:\d{2})(\,)([a-fA-F\d]{40})(\,)(.+)' sslblacklist.csv > done.csv
